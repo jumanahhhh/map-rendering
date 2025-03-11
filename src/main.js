@@ -1,5 +1,8 @@
 import mapboxgl from "mapbox-gl";
-mapboxgl.accessToken =import.meta.env.MAPBOX_ACCESSTOKEN
+
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
 navigator.geolocation.getCurrentPosition(successLocation, errorLocation,{enableHighAccuracy:true})
 
 function successLocation(position){
@@ -92,7 +95,7 @@ function setupMap(center){
       fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
           input
-        )}.json?access_token=${mapboxgl.accessToken}`
+        )}.json?access_token=${MAPBOX_TOKEN}`
       )
         .then((response) => response.json())
         .then((data) =>{
@@ -118,7 +121,7 @@ locationInput.addEventListener("input", async ()=>{
     suggestionsList.innerHTML=""
     return;
   }
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${ip}.json?access_token=${mapboxgl.accessToken}&autocomplete=true&limit=5`;
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${ip}.json?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=5`;
   const response = await fetch(url);
   const data = await response.json();
 
