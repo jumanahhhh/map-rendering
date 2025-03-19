@@ -1,5 +1,4 @@
 import {IFCLoader} from "web-ifc-three"
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 const MAPBOX_TOKEN=import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
 mapboxgl.accessToken=MAPBOX_TOKEN
@@ -152,7 +151,6 @@ function placeModelAtLocation([lng,lat]){
         type: 'custom',
         renderingMode: '3d',
         onAdd: function (map, gl) {
-            this.map=map
             this.camera = new THREE.Camera();
             this.scene = new THREE.Scene();
 
@@ -179,15 +177,6 @@ function placeModelAtLocation([lng,lat]){
                 antialias: true
             });
             this.renderer.autoClear = false;
-            this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-            this.controls.enableDamping = true;
-            this.controls.dampingFactor = 0.05;
-            this.controls.screenSpacePanning = false;
-            this.controls.minDistance = 1;
-            this.controls.maxDistance = 100;
-            this.controls.minPolarAngle = Math.PI / 2; 
-            this.controls.maxPolarAngle = Math.PI / 2; 
-    
         },
         render: function (gl, matrix) {
             const rotationX = new THREE.Matrix4().makeRotationAxis(
@@ -224,8 +213,6 @@ function placeModelAtLocation([lng,lat]){
             this.camera.projectionMatrix = m.multiply(l);
             this.renderer.resetState();
             this.renderer.render(this.scene, this.camera);
-            this.controls.update();
-
             this.map.triggerRepaint();
         }
     };

@@ -1,28 +1,40 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/images.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css" rel="stylesheet" />
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
-
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>    
     <title>Map Rendering</title>
-    <link rel="stylesheet" href="/src/style.css">
-
+    <link rel="icon" type="image/svg+xml" href="/images.png" />
+    <script src="https://unpkg.com/three@0.126.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet"/>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+    <link rel="stylesheet" href="/style.css">
   </head>
   <body>
     <script type="module" src="/src/main.js" defer ></script>
     <div id="map"></div>
     <div class="allinone">
-      <input type="text" id="locationInput" placeholder="Enter address | Coordinates" />
+      <input
+        type="text"
+        id="locationInput"
+        placeholder="Enter address | Coordinates"
+      />
+      
       <button id="search">Search</button>
-      <!-- <button id="toggle">Theme</button> -->
       <ul id="suggestions"></ul>
+    </div>
+    <div class="button-container">
+      <input type="file" id="file-input" accept=".ifc" />
+      <button id="placeModelButton">Place Model</button>
+    </div>
+    <div id="loader">
+      <div class="spinner"></div>
+      <p>Loading model...</p>
     </div>
     <footer>
       <p>@2025 Augrade | Jumanah Maheen</p>
     </footer>
   </body>
 </html>
+
