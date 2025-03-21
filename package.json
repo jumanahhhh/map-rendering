@@ -17,7 +17,7 @@
   "dependencies": {
     "gh-pages": "^6.3.0",
     "mapbox-gl": "^3.10.0",
-    "three": "^0.152.2",
+    "three": "^0.174.0",
     "web-ifc-three": "^0.0.126"
   }
 }

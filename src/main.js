@@ -1,11 +1,12 @@
 import {IFCLoader} from "web-ifc-three"
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import * as THREE from "three"
+import mapboxgl from 'mapbox-gl'
 
 const MAPBOX_TOKEN=import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
 mapboxgl.accessToken=MAPBOX_TOKEN
 navigator.geolocation.getCurrentPosition(successLocation, errLoc, { enableHighAccuracy: true });
 
-const THREE = window.THREE;
 const ifcLoader = new IFCLoader();
 ifcLoader.ifcManager.setWasmPath("/map-rendering/");
 
@@ -26,6 +27,19 @@ let pin=null
 let map;
 let ifcModel=null
 
+function getModelDimensions(model) {
+  const box = new THREE.Box3().setFromObject(model);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+
+  console.log("📏 Model Dimensions:");
+  console.log(`Width: ${size.x.toFixed(2)} meters`);
+  console.log(`Height: ${size.y.toFixed(2)} meters`);
+  console.log(`Depth: ${size.z.toFixed(2)} meters`);
+
+  return size;
+}
+
 // handling IFC model loading and rendering
 document.getElementById("file-input").addEventListener("change", async (event)=>{
     const file = event.target.files[0];
@@ -39,7 +53,7 @@ document.getElementById("file-input").addEventListener("change", async (event)=>
       ifcLoader.load(url, async (model)=>{
         ifcModel = model;
         console.log("IFC Model Loaded:", model);
-
+        getModelDimensions(ifcModel)
         if(pin){
           const {lng,lat} = pin.getLngLat();
           placeModelAtLocation([lng,lat]);
@@ -65,6 +79,7 @@ function setupMap(center){
         url:"mapbox://mapbox.terrain-rgb",
         tileSize:256,
       });
+
       map.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
       //3D Buildings
       map.addLayer({
@@ -79,6 +94,7 @@ function setupMap(center){
           "fill-extrusion-base": ["get", "min_height"],
           "fill-extrusion-opacity": 0.6 ,
         },
+        
       });
     });
 
@@ -123,12 +139,37 @@ function setupMap(center){
             }
     })
 }
+let renderer;
+let modelScale = 0.276;
+let modelRotationY = 0; 
+document.getElementById("scaleSlider").addEventListener("input", (event) => {
+    modelScale = parseFloat(event.target.value);
+    if (map.getLayer("3d-model")) {
+        map.triggerRepaint();
+    }
+});
+document.getElementById("rotateSlider").addEventListener("input", (event) => {
+  modelRotationY = parseFloat(event.target.value) * (Math.PI / 180); // Convert degrees to radians
+  if (map.getLayer("3d-model")) {
+      map.triggerRepaint();
+  }
+});
+document.getElementById("resetButton").addEventListener("click", () => {
+  modelScale = 0.276
+  modelRotationY = 0 
+  document.getElementById("scaleSlider").value = modelScale;
+  document.getElementById("rotateSlider").value = modelRotationY;
 
-function placeModelAtLocation([lng,lat]){
+  if (map.getLayer("3d-model")) {
+      map.triggerRepaint();
+  }
+});
+
+function placeModelAtLocation([lng, lat]) {
     console.log("Adding Model", ifcModel);
     if (!ifcModel || !map) return;
 
-    const modelOrigin = [lng,lat]
+    const modelOrigin = [lng, lat];
     const modelAltitude = 0;
     const modelRotate = [Math.PI / 2, 0, 0];
 
@@ -144,7 +185,7 @@ function placeModelAtLocation([lng,lat]){
         rotateX: modelRotate[0],
         rotateY: modelRotate[1],
         rotateZ: modelRotate[2],
-        scale: modelAsMercatorCoordinate.meterInMercatorCoordinateUnits()
+        scale: modelAsMercatorCoordinate.meterInMercatorCoordinateUnits() * modelScale
     };
 
     const customLayer = {
@@ -152,18 +193,39 @@ function placeModelAtLocation([lng,lat]){
         type: 'custom',
         renderingMode: '3d',
         onAdd: function (map, gl) {
-            this.map=map
+          
+            this.map = map;
             this.camera = new THREE.Camera();
             this.scene = new THREE.Scene();
 
-            // create two three.js lights to illuminate the model
-            const directionalLight = new THREE.DirectionalLight(0xffffff,0.8);
+            // Add ambient light to provide base illumination from all directions
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            this.scene.add(ambientLight);
+
+            // Keep existing directional lights
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(0, -70, 100).normalize();
             this.scene.add(directionalLight);
 
-            const directionalLight2 = new THREE.DirectionalLight(0xffffff,1);
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 1);
             directionalLight2.position.set(0, 70, 100).normalize();
             this.scene.add(directionalLight2);
+            
+            // Add more directional lights from different angles
+            const directionalLight3 = new THREE.DirectionalLight(0xffffff, 0.7);
+            directionalLight3.position.set(100, 0, 0).normalize();
+            this.scene.add(directionalLight3);
+            
+            const directionalLight4 = new THREE.DirectionalLight(0xffffff, 0.7);
+            directionalLight4.position.set(-100, 0, 0).normalize();
+            this.scene.add(directionalLight4);
+            
+            const directionalLight5 = new THREE.DirectionalLight(0xffffff, 0.7);
+            directionalLight5.position.set(0, 0, -100).normalize();
+            this.scene.add(directionalLight5);
+
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
+            this.scene.add(hemisphereLight);
 
             if (ifcModel) {
                 const box = new THREE.Box3().setFromObject(ifcModel);
@@ -172,7 +234,6 @@ function placeModelAtLocation([lng,lat]){
                 this.scene.add(ifcModel);
             }
 
-            // use the Mapbox GL JS map canvas for three.js
             this.renderer = new THREE.WebGLRenderer({
                 canvas: map.getCanvas(),
                 context: gl,
@@ -181,61 +242,40 @@ function placeModelAtLocation([lng,lat]){
             this.renderer.autoClear = false;
             this.controls = new OrbitControls(this.camera, this.renderer.domElement);
             this.controls.enableDamping = true;
-            this.controls.dampingFactor = 0.05;
-            this.controls.screenSpacePanning = false;
-            this.controls.minDistance = 1;
-            this.controls.maxDistance = 100;
-            this.controls.minPolarAngle = Math.PI / 2; 
-            this.controls.maxPolarAngle = Math.PI / 2; 
-    
         },
         render: function (gl, matrix) {
-            const rotationX = new THREE.Matrix4().makeRotationAxis(
-                new THREE.Vector3(1, 0, 0),
-                modelTransform.rotateX
-            );
-            const rotationY = new THREE.Matrix4().makeRotationAxis(
-                new THREE.Vector3(0, 1, 0),
-                modelTransform.rotateY
-            );
-            const rotationZ = new THREE.Matrix4().makeRotationAxis(
-                new THREE.Vector3(0, 0, 1),
-                modelTransform.rotateZ
-            );
+          // Correct scaling for real-world size
+          modelTransform.scale = modelAsMercatorCoordinate.meterInMercatorCoordinateUnits() * modelScale;
+          modelTransform.rotateY = modelRotationY; // Update Y-axis rotation
 
-            const m = new THREE.Matrix4().fromArray(matrix);
-            const l = new THREE.Matrix4()
-                .makeTranslation(
-                    modelTransform.translateX,
-                    modelTransform.translateY,
-                    modelTransform.translateZ
-                )
-                .scale(
-                    new THREE.Vector3(
-                        modelTransform.scale,
-                        -modelTransform.scale,
-                        modelTransform.scale
-                    )
-                )
-                .multiply(rotationX)
-                .multiply(rotationY)
-                .multiply(rotationZ);
+          const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), modelTransform.rotateX);
+          const rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), modelTransform.rotateY);
+          const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), modelTransform.rotateZ);
 
-            this.camera.projectionMatrix = m.multiply(l);
-            this.renderer.resetState();
-            this.renderer.render(this.scene, this.camera);
-            this.controls.update();
+          const m = new THREE.Matrix4().fromArray(matrix);
+          const l = new THREE.Matrix4()
+              .makeTranslation(modelTransform.translateX, modelTransform.translateY, modelTransform.translateZ)
+              .scale(new THREE.Vector3(modelTransform.scale, -modelTransform.scale, modelTransform.scale))
+              .multiply(rotationX)
+              .multiply(rotationY)
+              .multiply(rotationZ);
 
-            this.map.triggerRepaint();
-        }
+          this.camera.projectionMatrix = m.multiply(l);
+          this.renderer.resetState();
+          this.renderer.render(this.scene, this.camera);
+          this.controls.update();
+          this.map.triggerRepaint();
+      }
     };
 
     if (map.getLayer("3d-model")) {
-      map.removeLayer("3d-model");
+        map.removeLayer("3d-model");
     }
     map.addLayer(customLayer, "waterway-label");
+
     console.log("📍 Placing Model at:", lng, lat);
 }
+
 // place Model at Pinned Location
 document.getElementById("placeModelButton").addEventListener("click", () => {
   if(!pin){
@@ -251,10 +291,11 @@ document.getElementById("placeModelButton").addEventListener("click", () => {
 });
 
 window.addEventListener('resize', () => {
-  if (map && renderer) {
+  if (map && map.getLayer("3d-model")) {
     map.triggerRepaint();
   }
 });
+
 // Search suggestions for searching
 const suggestionsList = document.getElementById("suggestions")
 const locationInput = document.getElementById("locationInput");
@@ -332,5 +373,3 @@ function getBoundsFromCenter(center, radiusKm) {
         [center[0] + lngRadius, center[1] + latRadius]
     ];
 }
-
-
