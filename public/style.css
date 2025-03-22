@@ -251,5 +251,28 @@ input[type="range"]::-webkit-slider-thumb:hover {
   100% { transform: rotate(360deg); }
 }
 
+/* Add custom marker styles */
+.custom-marker {
+  background-size: cover;
+  width: 32px;
+  height: 40px;
+  cursor: pointer;
+  transform-origin: bottom center;
+}
+
+/* Override any Mapbox marker styles that might affect positioning */
+.mapboxgl-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  pointer-events: auto;
+}
+
+/* Ensure marker position is precise */
+.mapboxgl-marker.mapboxgl-marker-anchor-bottom {
+  transform: translate(-50%, -100%);
+}
+
 
 
