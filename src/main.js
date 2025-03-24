@@ -216,96 +216,66 @@ function placeModelAtLocation([lng, lat]) {
   };
 
   const customLayer = {
-    id: '3d-model',
-    type: 'custom',
-    renderingMode: '3d',
-    onAdd: function (map, gl) {
-      this.map = map;
-      this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      this.scene = new THREE.Scene();
-  
-          // Add ambient light to provide base illumination from all directions
+      id: '3d-model',
+      type: 'custom',
+      renderingMode: '3d',
+      onAdd: function (map, gl) {
+          this.map = map;
+          this.camera = new THREE.Camera();
+          this.scene = new THREE.Scene();
           const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
           this.scene.add(ambientLight);
-
-          // Keep existing directional lights
+    
           const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
           directionalLight.position.set(0, -70, 100).normalize();
           this.scene.add(directionalLight);
-
+    
           const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.8);
           directionalLight2.position.set(0, 70, 100).normalize();
           this.scene.add(directionalLight2);
-          
-          // Add more directional lights from different angles
-          const directionalLight3 = new THREE.DirectionalLight(0xffffff, 0.5);
-          directionalLight3.position.set(100, 0, 0).normalize();
-          this.scene.add(directionalLight3);
-          
-          const directionalLight4 = new THREE.DirectionalLight(0xffffff, 0.5);
-          directionalLight4.position.set(-100, 0, 0).normalize();
-          this.scene.add(directionalLight4);
-
-
+    
           const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
           this.scene.add(hemisphereLight);
-  
-      // Add IFC model to the scene
-      if (ifcModel) {
-          const box = new THREE.Box3().setFromObject(ifcModel);
-          const center = box.getCenter(new THREE.Vector3());
-          ifcModel.position.sub(center);
-          this.scene.add(ifcModel);
-      }
-  
-      this.renderer = new THREE.WebGLRenderer({
-          canvas: map.getCanvas(),
-          context: gl,
-          antialias: true
-      });
-      this.renderer.autoClear = false;
-  
-      this.controls = new OrbitControls(this.camera, map.getCanvas());
-      this.controls.enableDamping = true;  // Smooth rotation effect
-      this.controls.dampingFactor = 0.05;
-      this.controls.enableZoom = false;      // Allow zooming
-      
-      // Restrict vertical rotation by setting the min and max polar angles to π/2
-      this.controls.minPolarAngle = Math.PI / 2;  // Prevent looking up
-      this.controls.maxPolarAngle = Math.PI / 2;  // Prevent looking down
-      
-      this.controls.update();
-      
-      this.camera.position.set(0, 2, 5);
-  },
-  render: function (gl, matrix) {
-    modelTransform.scale = modelAsMercatorCoordinate.meterInMercatorCoordinateUnits() * modelScale;
-    modelTransform.rotateY = modelRotationY;
 
-    const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), modelTransform.rotateX);
-    const rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), modelTransform.rotateY);
-    const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), modelTransform.rotateZ);
+          if (ifcModel) {
+              const box = new THREE.Box3().setFromObject(ifcModel);
+              const center = box.getCenter(new THREE.Vector3());
+              ifcModel.position.sub(center);
+              this.scene.add(ifcModel);
+          }
 
-    const m = new THREE.Matrix4().fromArray(matrix);
-    const l = new THREE.Matrix4()
-        .makeTranslation(modelTransform.translateX, modelTransform.translateY, modelTransform.translateZ)
-        .scale(new THREE.Vector3(modelTransform.scale, -modelTransform.scale, modelTransform.scale))
-        .multiply(rotationX)
-        .multiply(rotationY)
-        .multiply(rotationZ);
+          this.renderer = new THREE.WebGLRenderer({
+              canvas: map.getCanvas(),
+              context: gl,
+              antialias: true
+          });
+          this.renderer.autoClear = false;
+          this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+          this.controls.enableDamping = true;
+      },
+      render: function (gl, matrix) {
+        modelTransform.scale = modelAsMercatorCoordinate.meterInMercatorCoordinateUnits() * modelScale;
+        modelTransform.rotateY = modelRotationY; // Update Y-axis rotation
 
-    this.camera.projectionMatrix = m.multiply(l);
-    
-    // Update controls before rendering
-    this.controls.update();
+        const rotationX = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), modelTransform.rotateX);
+        const rotationY = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 1, 0), modelTransform.rotateY);
+        const rotationZ = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), modelTransform.rotateZ);
 
-    this.renderer.resetState();
-    this.renderer.render(this.scene, this.camera);
+        const m = new THREE.Matrix4().fromArray(matrix);
+        const l = new THREE.Matrix4()
+            .makeTranslation(modelTransform.translateX, modelTransform.translateY, modelTransform.translateZ)
+            .scale(new THREE.Vector3(modelTransform.scale, -modelTransform.scale, modelTransform.scale))
+            .multiply(rotationX)
+            .multiply(rotationY)
+            .multiply(rotationZ);
 
-    this.map.triggerRepaint();
-}
-
-};
+        this.camera.projectionMatrix = m.multiply(l);
+        this.renderer.resetState();
+        this.renderer.render(this.scene, this.camera);
+        this.controls.update();
+        this.map.triggerRepaint();
+    }
+  };
 
   if (map.getLayer("3d-model")) {
       map.removeLayer("3d-model");
@@ -314,6 +284,7 @@ function placeModelAtLocation([lng, lat]) {
 
   console.log("📍 Placing Model at:", lng, lat);
 }
+
 
 
 
