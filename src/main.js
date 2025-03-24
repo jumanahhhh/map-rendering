@@ -39,15 +39,31 @@ function getModelDimensions(model) {
 
   return size;
 }
-
+document.getElementById("map").innerHTML = `
+  <div style="color: white; padding: 20px; text-align: center;">
+    <div class="spinner" style="margin: 0 auto;"></div>
+    <h3>Initializing map...</h3>
+    <p>Loading resources</p>
+  </div>
+`;
 // handling IFC model loading and rendering
 document.getElementById("file-input").addEventListener("change", async (event)=>{
-    const file = event.target.files[0];
-    if(file){
-      const url = URL.createObjectURL(file);
-      loadIFCModel(url);
+  const file = event.target.files[0];
+  if(file){
+    console.log("File selected:", file.name, "Size:", (file.size / 1024 / 1024).toFixed(2) + "MB", "Type:", file.type);
+    showLoader();
+    const url = URL.createObjectURL(file);
+    try {
+      console.log("Attempting to load IFC model from blob URL:", url);
+      await loadIFCModel(url);
+    } catch (error) {
+      console.error("Error loading IFC model:", error);
+      alert("Error loading IFC model: " + error.message);
+    } finally {
+      hideLoader();
     }
-  });
+  }
+});
   
   async function loadIFCModel(url) {
       ifcLoader.load(url, async (model)=>{
